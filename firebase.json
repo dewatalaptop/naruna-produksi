@@ -1,0 +1,14 @@
+{
+  "hosting": {
+    "target": "naruna-produksi",
+    "public": ".",
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "README.md"],
+    "rewrites": [{ "source": "**", "destination": "/index.html" }],
+    "headers": [
+      {
+        "source": "src/**",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }]
+      }
+    ]
+  }
+}

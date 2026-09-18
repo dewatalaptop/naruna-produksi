@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Surat Jalan — Naruna Produksi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <style>
+      .wg-pick-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+      .wg-pick-row input[type="number"] { width: 90px; }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="main">
+        <h1>Surat Jalan</h1>
+        <p class="page-desc">Normalnya terbentuk otomatis begitu tiket lolos QC (via aplikasi Android, belum dibangun). Sampai saat itu, buat manual di sini — progres pengiriman parsial tetap tercatat per PO.</p>
+
+        <div class="panel">
+          <h3 style="margin-bottom: 12px; font-size: 14px;">Buat Surat Jalan Manual</h3>
+          <div class="field"><label>Purchase Order</label><select id="sj-po"></select></div>
+          <div id="wg-picker"></div>
+          <div class="field" style="margin-top:12px;"><label>Tanggal kirim</label><input id="sj-tanggal" type="date" /></div>
+          <button class="btn" id="save-sj-btn">Simpan Surat Jalan</button>
+          <span class="error-text" id="sj-error" style="display:none; margin-left: 10px;"></span>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom: 12px; font-size: 14px;">Riwayat Pengiriman</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Tanggal</th><th>PO</th><th>Item terkirim</th><th>Progres PO</th></tr></thead>
+              <tbody id="sj-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module">
+      import { requireAuth } from "/src/auth-guard.js";
+      import { renderNav } from "/src/nav.js";
+      import { purchaseOrdersCol, workGroupsCol, suratJalanCol, itemsCol, materialsCol, colorsCol, watchCollection, getAllOnce, addDocTimestamped, toLookupMap } from "/src/data.js";
+      import { Timestamp } from "/src/firebase.js";
+      import { escapeHtml, formatDate } from "/src/format.js";
+
+      await requireAuth();
+      renderNav("surat-jalan.html");
+
+      const [items, materials, colors] = await Promise.all([getAllOnce(itemsCol), getAllOnce(materialsCol), getAllOnce(colorsCol)]);
+      const itemMap = toLookupMap(items), materialMap = toLookupMap(materials), colorMap = toLookupMap(colors);
+
+      let purchaseOrders = [], workGroups = [], suratJalanRows = [];
+
+      function describeWg(w) {
+        return `${itemMap[w.item_id]?.nama ?? "?"} — ${materialMap[w.material_id]?.nama ?? "?"} / ${colorMap[w.color_id]?.nama ?? "?"}`;
+      }
+
+      function renderWgPicker() {
+        const poId = document.getElementById("sj-po").value;
+        const relevant = workGroups.filter((w) => w.po_id === poId);
+        document.getElementById("wg-picker").innerHTML = relevant.length
+          ? relevant.map((w) => `
+            <div class="wg-pick-row">
+              <span>${escapeHtml(describeWg(w))} <span class="hint">(qty pesanan: ${w.jumlah})</span></span>
+              <input type="number" class="wg-qty" data-wg="${w.id}" data-name="${escapeHtml(describeWg(w))}" min="0" max="${w.jumlah}" value="0" />
+            </div>`).join("")
+          : `<p class="hint">PO ini belum punya kelompok kerja.</p>`;
+      }
+
+      watchCollection(purchaseOrdersCol, (rows) => {
+        purchaseOrders = rows;
+        document.getElementById("sj-po").innerHTML = rows.map((p) => `<option value="${p.id}">${escapeHtml(p.no_po)} — ${escapeHtml(p.customer)}</option>`).join("");
+        renderWgPicker();
+      });
+      document.getElementById("sj-po").addEventListener("change", renderWgPicker);
+      watchCollection(workGroupsCol, (rows) => { workGroups = rows; renderWgPicker(); });
+
+      document.getElementById("save-sj-btn").addEventListener("click", async () => {
+        const errEl = document.getElementById("sj-error");
+        errEl.style.display = "none";
+        const po_id = document.getElementById("sj-po").value;
+        const tanggalStr = document.getElementById("sj-tanggal").value;
+        if (!po_id || !tanggalStr) {
+          errEl.textContent = "Pilih PO dan tanggal kirim dulu.";
+          errEl.style.display = "inline";
+          return;
+        }
+        const item_terkirim = Array.from(document.querySelectorAll(".wg-qty"))
+          .map((inp) => ({ work_group_id: inp.dataset.wg, nama: inp.dataset.name, jumlah: Number(inp.value) || 0 }))
+          .filter((x) => x.jumlah > 0);
+        if (item_terkirim.length === 0) {
+          errEl.textContent = "Isi jumlah terkirim minimal satu item.";
+          errEl.style.display = "inline";
+          return;
+        }
+        const total_terkirim = item_terkirim.reduce((sum, x) => sum + x.jumlah, 0);
+        const poWorkGroups = workGroups.filter((w) => w.po_id === po_id);
+        const total_dipesan = poWorkGroups.reduce((sum, w) => sum + (w.jumlah || 0), 0);
+
+        await addDocTimestamped(suratJalanCol, {
+          po_id, tanggal: Timestamp.fromDate(new Date(tanggalStr)), item_terkirim, total_terkirim, total_dipesan,
+        });
+        document.querySelectorAll(".wg-qty").forEach((inp) => (inp.value = "0"));
+      });
+
+      watchCollection(suratJalanCol, (rows) => {
+        suratJalanRows = rows;
+        const poMap = toLookupMap(purchaseOrders);
+        document.getElementById("sj-tbody").innerHTML = rows.length
+          ? rows.slice().reverse().map((sj) => {
+              const po = poMap[sj.po_id];
+              const sentSoFar = rows.filter((r) => r.po_id === sj.po_id).reduce((sum, r) => sum + (r.total_terkirim || 0), 0);
+              return `
+              <tr>
+                <td>${formatDate(sj.tanggal)}</td>
+                <td>${escapeHtml(po?.no_po ?? "?")}</td>
+                <td>${(sj.item_terkirim || []).map((x) => `${escapeHtml(x.nama)} ×${x.jumlah}`).join(", ")}</td>
+                <td>${sentSoFar} / ${sj.total_dipesan ?? "?"}</td>
+              </tr>`;
+            }).join("")
+          : `<tr><td colspan="4" class="empty-state">Belum ada pengiriman tercatat.</td></tr>`;
+      });
+    </script>
+  </body>
+</html>

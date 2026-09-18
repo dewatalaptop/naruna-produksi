@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Laporan Kapasitas — Naruna Produksi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="main">
+        <h1>Laporan Kapasitas</h1>
+        <p class="page-desc">Rekap kapasitas bulanan per jenis barang dan laju kerja per tahap, dari agregasi scan_events. Akan terisi begitu aplikasi Android (belum dibangun) mulai mencatat scan di lantai gudang.</p>
+
+        <div class="stat-grid" id="stat-grid"></div>
+
+        <div class="panel">
+          <h3 style="margin-bottom: 12px; font-size: 14px;">Scan bulan ini per stasiun</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Stasiun</th><th>Jumlah Scan Masuk</th><th>Jumlah Scan Keluar</th></tr></thead>
+              <tbody id="stage-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom: 12px; font-size: 14px;">Scan bulan ini per item</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Item</th><th>Jumlah Scan</th></tr></thead>
+              <tbody id="item-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module">
+      import { requireAuth } from "/src/auth-guard.js";
+      import { renderNav } from "/src/nav.js";
+      import { scanEventsCol, stasiunKerjaCol, workGroupsCol, itemsCol, watchCollection, getAllOnce, toLookupMap } from "/src/data.js";
+      import { escapeHtml } from "/src/format.js";
+
+      await requireAuth();
+      renderNav("laporan.html");
+
+      const [stasiunList, items] = await Promise.all([getAllOnce(stasiunKerjaCol), getAllOnce(itemsCol)]);
+      const stasiunSorted = stasiunList.slice().sort((a, b) => (a.urutan_tahap ?? 0) - (b.urutan_tahap ?? 0));
+      const itemMap = toLookupMap(items);
+
+      let workGroupMap = {};
+      watchCollection(workGroupsCol, (rows) => { workGroupMap = toLookupMap(rows); });
+
+      watchCollection(scanEventsCol, (rows) => {
+        const now = new Date();
+        const thisMonth = rows.filter((s) => {
+          const d = s.timestamp?.toDate ? s.timestamp.toDate() : s.timestamp ? new Date(s.timestamp) : null;
+          return d && d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        });
+
+        document.getElementById("stat-grid").innerHTML = `
+          <div class="stat-card"><div class="v">${thisMonth.length}</div><div class="l">Total scan bulan ini</div></div>
+          <div class="stat-card"><div class="v">${rows.length}</div><div class="l">Total scan sepanjang waktu</div></div>
+        `;
+
+        const byStage = {};
+        stasiunSorted.forEach((s) => (byStage[s.id] = { masuk: 0, keluar: 0 }));
+        thisMonth.forEach((s) => {
+          if (!byStage[s.stasiun_id]) byStage[s.stasiun_id] = { masuk: 0, keluar: 0 };
+          if (s.tipe === "masuk") byStage[s.stasiun_id].masuk++;
+          else if (s.tipe === "keluar") byStage[s.stasiun_id].keluar++;
+        });
+        document.getElementById("stage-tbody").innerHTML = stasiunSorted.length
+          ? stasiunSorted.map((s) => `<tr><td>${escapeHtml(s.nama)}</td><td>${byStage[s.id]?.masuk ?? 0}</td><td>${byStage[s.id]?.keluar ?? 0}</td></tr>`).join("")
+          : `<tr><td colspan="3" class="empty-state">Belum ada stasiun kerja terdaftar.</td></tr>`;
+
+        const byItem = {};
+        thisMonth.forEach((s) => {
+          const wg = workGroupMap[s.work_group_id];
+          if (!wg) return;
+          byItem[wg.item_id] = (byItem[wg.item_id] || 0) + 1;
+        });
+        const itemRows = Object.entries(byItem).sort((a, b) => b[1] - a[1]);
+        document.getElementById("item-tbody").innerHTML = itemRows.length
+          ? itemRows.map(([itemId, count]) => `<tr><td>${escapeHtml(itemMap[itemId]?.nama ?? "?")}</td><td>${count}</td></tr>`).join("")
+          : `<tr><td colspan="2" class="empty-state">Belum ada data scan bulan ini.</td></tr>`;
+      });
+    </script>
+  </body>
+</html>

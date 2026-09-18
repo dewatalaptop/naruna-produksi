@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard — Naruna Produksi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <style>
+      .progress-track { background: var(--surface-sunk); border-radius: 999px; height: 6px; width: 100px; overflow: hidden; }
+      .progress-fill { height: 100%; border-radius: 999px; background: var(--clay); }
+      .filter-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+      .filter-chip { padding: 6px 13px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 12.5px; font-weight: 600; color: var(--text-secondary); }
+      .filter-chip.active { background: var(--clay); border-color: var(--clay); color: #fff; }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="main">
+        <h1>Dashboard Kepala Gudang</h1>
+        <p class="page-desc">Semua kelompok kerja aktif, diurutkan berdasar prioritas — yang paling berisiko terlambat muncul paling atas.</p>
+
+        <div class="stat-grid" id="stat-grid"></div>
+        <div class="filter-bar" id="filter-bar"></div>
+
+        <div class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Prioritas</th><th>Item</th><th>Material / Warna</th><th>Qty</th><th>Tahap</th><th>Tenggat Proyeksi</th><th>Status</th></tr></thead>
+              <tbody id="wg-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module">
+      import { requireAuth } from "/src/auth-guard.js";
+      import { renderNav } from "/src/nav.js";
+      import { itemsCol, materialsCol, colorsCol, stasiunKerjaCol, workGroupsCol, watchCollection, getAllOnce, toLookupMap } from "/src/data.js";
+      import { escapeHtml, formatDate, daysBetween } from "/src/format.js";
+
+      await requireAuth();
+      renderNav("dashboard.html");
+
+      const [items, materials, colors, stasiunList] = await Promise.all([
+        getAllOnce(itemsCol), getAllOnce(materialsCol), getAllOnce(colorsCol), getAllOnce(stasiunKerjaCol),
+      ]);
+      const itemMap = toLookupMap(items), materialMap = toLookupMap(materials), colorMap = toLookupMap(colors);
+      const stasiunSorted = stasiunList.slice().sort((a, b) => (a.urutan_tahap ?? 0) - (b.urutan_tahap ?? 0));
+
+      // Risk classification is a simple deadline-proximity heuristic for
+      // display only — the authoritative urgency ranking (urutan_prioritas)
+      // comes from the hitungUlangPrioritas Cloud Function, which factors in
+      // real scan-event velocity, not just days-until-deadline.
+      function riskBadge(tenggat) {
+        if (!tenggat) return `<span class="badge badge-neutral">-</span>`;
+        const days = daysBetween(new Date(), tenggat);
+        if (days < 0) return `<span class="badge badge-rust">Terlambat ${Math.abs(days)}h</span>`;
+        if (days <= 3) return `<span class="badge badge-amber">${days}h lagi</span>`;
+        return `<span class="badge badge-leaf">${days}h lagi</span>`;
+      }
+
+      let activeFilter = "semua";
+
+      watchCollection(workGroupsCol, (rows) => {
+        const active = rows.filter((w) => w.status === "aktif").sort((a, b) => (a.urutan_prioritas ?? 9999) - (b.urutan_prioritas ?? 9999));
+        const overdue = active.filter((w) => w.tenggat_proyeksi && daysBetween(new Date(), w.tenggat_proyeksi) < 0).length;
+        const soon = active.filter((w) => w.tenggat_proyeksi && daysBetween(new Date(), w.tenggat_proyeksi) >= 0 && daysBetween(new Date(), w.tenggat_proyeksi) <= 3).length;
+
+        document.getElementById("stat-grid").innerHTML = `
+          <div class="stat-card"><div class="v">${active.length}</div><div class="l">Kelompok kerja aktif</div></div>
+          <div class="stat-card"><div class="v" style="color:var(--rust)">${overdue}</div><div class="l">Terlambat dari tenggat</div></div>
+          <div class="stat-card"><div class="v" style="color:var(--amber)">${soon}</div><div class="l">Tenggat &le; 3 hari</div></div>
+          <div class="stat-card"><div class="v">${stasiunSorted.length}</div><div class="l">Stasiun kerja terdaftar</div></div>
+        `;
+
+        const filters = ["semua", ...stasiunSorted.map((s) => s.nama)];
+        document.getElementById("filter-bar").innerHTML = filters
+          .map((f) => `<button class="filter-chip ${f === activeFilter ? "active" : ""}" data-filter="${escapeHtml(f)}">${escapeHtml(f)}</button>`)
+          .join("");
+        document.querySelectorAll(".filter-chip").forEach((btn) =>
+          btn.addEventListener("click", () => { activeFilter = btn.dataset.filter; renderTable(active); document.querySelectorAll(".filter-chip").forEach((b) => b.classList.toggle("active", b === btn)); })
+        );
+
+        renderTable(active);
+      });
+
+      function renderTable(active) {
+        const filtered = activeFilter === "semua" ? active : active.filter((w) => stasiunSorted[w.tahap_sekarang]?.nama === activeFilter);
+        document.getElementById("wg-tbody").innerHTML = filtered.length
+          ? filtered.map((w, idx) => {
+              const stageName = stasiunSorted[w.tahap_sekarang]?.nama ?? `Tahap ${w.tahap_sekarang ?? 0}`;
+              const pct = stasiunSorted.length ? Math.round(((w.tahap_sekarang ?? 0) / stasiunSorted.length) * 100) : 0;
+              return `
+              <tr>
+                <td>#${idx + 1}</td>
+                <td>${escapeHtml(itemMap[w.item_id]?.nama ?? "?")}</td>
+                <td>${escapeHtml(materialMap[w.material_id]?.nama ?? "?")} / ${escapeHtml(colorMap[w.color_id]?.nama ?? "?")}</td>
+                <td>${w.jumlah ?? "-"}</td>
+                <td>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+                    <span style="font-size:11.5px; color: var(--text-faint);">${escapeHtml(stageName)}</span>
+                  </div>
+                </td>
+                <td>${formatDate(w.tenggat_proyeksi)}</td>
+                <td>${riskBadge(w.tenggat_proyeksi)}</td>
+              </tr>`;
+            }).join("")
+          : `<tr><td colspan="7" class="empty-state">Belum ada kelompok kerja aktif${activeFilter !== "semua" ? " di stasiun ini" : ""}. Buat PO baru untuk mulai.</td></tr>`;
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pesanan Tertahan — Naruna Produksi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="main">
+        <h1>Manajemen Pesanan Tertahan Customer</h1>
+        <p class="page-desc">Kelompok kerja yang ditahan menunggu konfirmasi customer dikecualikan dari perhitungan prioritas, dan lama penahanannya dicatat terpisah sebagai pengingat follow-up CS.</p>
+
+        <div class="panel">
+          <h3 style="margin-bottom: 12px; font-size: 14px;">Sedang Tertahan</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Item</th><th>Material / Warna</th><th>Ditahan sejak</th><th>Lama tertahan</th><th></th></tr></thead>
+              <tbody id="held-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3 style="margin-bottom: 12px; font-size: 14px;">Tahan Kelompok Kerja Aktif</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Item</th><th>Material / Warna</th><th>Tenggat Proyeksi</th><th></th></tr></thead>
+              <tbody id="active-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module">
+      import { requireAuth } from "/src/auth-guard.js";
+      import { renderNav } from "/src/nav.js";
+      import { itemsCol, materialsCol, colorsCol, workGroupsCol, watchCollection, getAllOnce, updateDocTimestamped, toLookupMap } from "/src/data.js";
+      import { Timestamp } from "/src/firebase.js";
+      import { escapeHtml, formatDate, daysBetween } from "/src/format.js";
+
+      await requireAuth();
+      renderNav("pesanan-tertahan.html");
+
+      const [items, materials, colors] = await Promise.all([getAllOnce(itemsCol), getAllOnce(materialsCol), getAllOnce(colorsCol)]);
+      const itemMap = toLookupMap(items), materialMap = toLookupMap(materials), colorMap = toLookupMap(colors);
+
+      function describe(w) {
+        return `${escapeHtml(itemMap[w.item_id]?.nama ?? "?")}</td><td>${escapeHtml(materialMap[w.material_id]?.nama ?? "?")} / ${escapeHtml(colorMap[w.color_id]?.nama ?? "?")}`;
+      }
+
+      async function holdWorkGroup(id) {
+        await updateDocTimestamped(workGroupsCol, id, { status: "menunggu_konfirmasi", ditahan_sejak: Timestamp.fromDate(new Date()) });
+      }
+      async function resumeWorkGroup(id) {
+        await updateDocTimestamped(workGroupsCol, id, { status: "aktif", ditahan_sejak: null });
+      }
+
+      watchCollection(workGroupsCol, (rows) => {
+        const held = rows.filter((w) => w.status === "menunggu_konfirmasi");
+        const active = rows.filter((w) => w.status === "aktif").sort((a, b) => (a.urutan_prioritas ?? 9999) - (b.urutan_prioritas ?? 9999));
+
+        document.getElementById("held-tbody").innerHTML = held.length
+          ? held.map((w) => {
+              const days = w.ditahan_sejak ? daysBetween(w.ditahan_sejak, new Date()) : 0;
+              return `
+              <tr>
+                <td>${describe(w)}</td>
+                <td>${formatDate(w.ditahan_sejak)}</td>
+                <td><span class="badge ${days >= 7 ? "badge-rust" : "badge-amber"}">${days} hari</span></td>
+                <td><button class="btn btn-ghost btn-sm" data-resume="${w.id}">Lanjutkan</button></td>
+              </tr>`;
+            }).join("")
+          : `<tr><td colspan="4" class="empty-state">Tidak ada pesanan tertahan saat ini.</td></tr>`;
+        document.querySelectorAll("[data-resume]").forEach((btn) => btn.addEventListener("click", () => resumeWorkGroup(btn.dataset.resume)));
+
+        document.getElementById("active-tbody").innerHTML = active.length
+          ? active.map((w) => `
+            <tr>
+              <td>${describe(w)}</td>
+              <td>${formatDate(w.tenggat_proyeksi)}</td>
+              <td><button class="btn btn-ghost btn-sm" data-hold="${w.id}">Tahan</button></td>
+            </tr>`).join("")
+          : `<tr><td colspan="4" class="empty-state">Tidak ada kelompok kerja aktif.</td></tr>`;
+        document.querySelectorAll("[data-hold]").forEach((btn) => btn.addEventListener("click", () => holdWorkGroup(btn.dataset.hold)));
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stok Biskuit — Naruna Produksi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="main">
+        <h1>Stok Biskuit</h1>
+        <p class="page-desc">Stok per kombinasi item × material × warna yang siap masuk tahap painting. Diisi manual sampai aplikasi Android (belum dibangun) bisa menyesuaikan otomatis dari scan tahap.</p>
+
+        <div class="panel">
+          <h3 style="margin-bottom: 12px; font-size: 14px;">Catat / perbarui stok</h3>
+          <div class="field-row">
+            <div class="field"><label>Item</label><select id="stok-item"></select></div>
+            <div class="field"><label>Material</label><select id="stok-material"></select></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Warna</label><select id="stok-color"></select></div>
+            <div class="field"><label>Jumlah (rak)</label><input id="stok-jumlah" type="number" min="0" value="0" /></div>
+          </div>
+          <button class="btn" id="save-stok-btn">Simpan Stok</button>
+          <span class="error-text" id="stok-error" style="display:none; margin-left: 10px;"></span>
+        </div>
+
+        <div class="panel">
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Item</th><th>Material</th><th>Warna</th><th>Jumlah Rak</th><th></th></tr></thead>
+              <tbody id="stok-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module">
+      import { requireAuth } from "/src/auth-guard.js";
+      import { renderNav } from "/src/nav.js";
+      import { itemsCol, materialsCol, colorsCol, stokBiskuitCol, watchCollection, getAllOnce, addDocTimestamped, updateDocTimestamped, removeDoc, toLookupMap } from "/src/data.js";
+      import { escapeHtml } from "/src/format.js";
+
+      await requireAuth();
+      renderNav("stok.html");
+
+      const [items, materials, colors] = await Promise.all([getAllOnce(itemsCol), getAllOnce(materialsCol), getAllOnce(colorsCol)]);
+      const itemMap = toLookupMap(items), materialMap = toLookupMap(materials), colorMap = toLookupMap(colors);
+
+      function opt(rows) { return rows.map((r) => `<option value="${r.id}">${escapeHtml(r.nama)}</option>`).join(""); }
+      document.getElementById("stok-item").innerHTML = opt(items);
+      document.getElementById("stok-material").innerHTML = opt(materials);
+      document.getElementById("stok-color").innerHTML = opt(colors);
+
+      if (items.length === 0 || materials.length === 0 || colors.length === 0) {
+        document.getElementById("stok-error").textContent = "Lengkapi item, material, dan warna di Master Data dulu.";
+        document.getElementById("stok-error").style.display = "inline";
+        document.getElementById("save-stok-btn").disabled = true;
+      }
+
+      document.getElementById("save-stok-btn").addEventListener("click", async () => {
+        const item_id = document.getElementById("stok-item").value;
+        const material_id = document.getElementById("stok-material").value;
+        const color_id = document.getElementById("stok-color").value;
+        const jumlah_rak = Number(document.getElementById("stok-jumlah").value) || 0;
+        const existing = currentRows.find((r) => r.item_id === item_id && r.material_id === material_id && r.color_id === color_id);
+        if (existing) {
+          await updateDocTimestamped(stokBiskuitCol, existing.id, { jumlah_rak });
+        } else {
+          await addDocTimestamped(stokBiskuitCol, { item_id, material_id, color_id, jumlah_rak });
+        }
+        document.getElementById("stok-jumlah").value = "0";
+      });
+
+      let currentRows = [];
+      watchCollection(stokBiskuitCol, (rows) => {
+        currentRows = rows;
+        document.getElementById("stok-tbody").innerHTML = rows.length
+          ? rows.map((s) => `
+            <tr>
+              <td>${escapeHtml(itemMap[s.item_id]?.nama ?? "?")}</td>
+              <td>${escapeHtml(materialMap[s.material_id]?.nama ?? "?")}</td>
+              <td>${escapeHtml(colorMap[s.color_id]?.nama ?? "?")}</td>
+              <td>${s.jumlah_rak ?? 0}</td>
+              <td><button class="btn btn-ghost btn-sm" data-del="${s.id}">Hapus</button></td>
+            </tr>`).join("")
+          : `<tr><td colspan="5" class="empty-state">Belum ada data stok.</td></tr>`;
+        document.querySelectorAll("[data-del]").forEach((btn) => btn.addEventListener("click", () => removeDoc(stokBiskuitCol, btn.dataset.del)));
+      });
+    </script>
+  </body>
+</html>

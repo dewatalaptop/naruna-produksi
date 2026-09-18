@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Master Data — Naruna Produksi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <style>
+      .tabs { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+      .tab-btn { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+      .tab-btn.active { background: var(--clay); border-color: var(--clay); color: #fff; }
+      .tab-panel { display: none; }
+      .tab-panel.active { display: block; }
+      .stage-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+      .stage-row input[type="checkbox"] { width: 16px; height: 16px; }
+      .stage-row input[type="number"] { width: 80px; }
+      .color-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--border); vertical-align: -2px; margin-right: 6px; }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="main">
+        <h1>Master Data</h1>
+        <p class="page-desc">Data induk: item, material, warna, dan stasiun kerja. Semua modul lain (PO, dashboard, scan) bergantung pada data ini.</p>
+
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="items">Item</button>
+          <button class="tab-btn" data-tab="materials">Material</button>
+          <button class="tab-btn" data-tab="colors">Warna</button>
+          <button class="tab-btn" data-tab="stasiun">Stasiun Kerja</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-items">
+          <div class="panel">
+            <h3 style="margin-bottom: 12px; font-size: 14px;">Tambah Item</h3>
+            <div class="field-row">
+              <div class="field"><label>Nama item</label><input id="item-nama" placeholder="mis. Mangkuk Kecil" /></div>
+              <div class="field"><label>Kategori</label><input id="item-kategori" placeholder="mis. Tableware" /></div>
+            </div>
+            <div class="field">
+              <label>Tahapan kerja &amp; estimasi durasi (hari) — centang tahap yang berlaku untuk item ini</label>
+              <div id="item-stages-list"><p class="hint">Tambahkan stasiun kerja dulu di tab "Stasiun Kerja".</p></div>
+            </div>
+            <button class="btn" id="save-item-btn">Simpan Item</button>
+          </div>
+          <div class="panel">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Nama</th><th>Kategori</th><th>Jumlah Tahap</th><th></th></tr></thead>
+                <tbody id="items-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tab-materials">
+          <div class="panel">
+            <div class="field-row">
+              <div class="field"><label>Nama material</label><input id="material-nama" placeholder="mis. Stoneware" /></div>
+            </div>
+            <button class="btn" id="save-material-btn">Simpan Material</button>
+          </div>
+          <div class="panel">
+            <div class="table-wrap"><table><thead><tr><th>Nama</th><th></th></tr></thead><tbody id="materials-tbody"></tbody></table></div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tab-colors">
+          <div class="panel">
+            <div class="field-row">
+              <div class="field"><label>Nama warna</label><input id="color-nama" placeholder="mis. Biru Kobalt" /></div>
+              <div class="field"><label>Kode warna</label><input id="color-hex" type="color" value="#b5651d" /></div>
+            </div>
+            <button class="btn" id="save-color-btn">Simpan Warna</button>
+          </div>
+          <div class="panel">
+            <div class="table-wrap"><table><thead><tr><th>Warna</th><th>Kode</th><th></th></tr></thead><tbody id="colors-tbody"></tbody></table></div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tab-stasiun">
+          <div class="panel">
+            <p class="hint" style="margin-bottom: 12px;">Urutan stasiun kerja mengikuti alur produksi nyata di gudang — tambahkan sesuai kondisi Naruna yang sebenarnya, bukan asumsi baku.</p>
+            <div class="field-row">
+              <div class="field"><label>Nama stasiun / tahap</label><input id="stasiun-nama" placeholder="mis. Pembentukan" /></div>
+              <div class="field"><label>Urutan</label><input id="stasiun-urutan" type="number" min="1" /></div>
+            </div>
+            <button class="btn" id="save-stasiun-btn">Simpan Stasiun</button>
+          </div>
+          <div class="panel">
+            <div class="table-wrap"><table><thead><tr><th>Urutan</th><th>Nama</th><th></th></tr></thead><tbody id="stasiun-tbody"></tbody></table></div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module">
+      import { requireAuth } from "/src/auth-guard.js";
+      import { renderNav } from "/src/nav.js";
+      import { itemsCol, materialsCol, colorsCol, stasiunKerjaCol, watchCollection, addDocTimestamped, removeDoc } from "/src/data.js";
+      import { escapeHtml } from "/src/format.js";
+
+      await requireAuth();
+      renderNav("master-data.html");
+
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+          document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById(`tab-${btn.dataset.tab}`).classList.add("active");
+        });
+      });
+
+      let stasiunList = [];
+
+      // --- Stasiun Kerja ---
+      watchCollection(stasiunKerjaCol, (rows) => {
+        stasiunList = rows.slice().sort((a, b) => (a.urutan_tahap ?? 0) - (b.urutan_tahap ?? 0));
+        document.getElementById("stasiun-tbody").innerHTML = stasiunList.length
+          ? stasiunList.map((s) => `
+            <tr>
+              <td>${s.urutan_tahap ?? "-"}</td>
+              <td>${escapeHtml(s.nama)}</td>
+              <td><button class="btn btn-ghost btn-sm" data-del-stasiun="${s.id}">Hapus</button></td>
+            </tr>`).join("")
+          : `<tr><td colspan="3" class="empty-state">Belum ada stasiun kerja.</td></tr>`;
+
+        document.querySelectorAll("[data-del-stasiun]").forEach((btn) =>
+          btn.addEventListener("click", () => removeDoc(stasiunKerjaCol, btn.dataset.delStasiun))
+        );
+
+        renderItemStagesChecklist();
+      });
+
+      document.getElementById("save-stasiun-btn").addEventListener("click", async () => {
+        const nama = document.getElementById("stasiun-nama").value.trim();
+        const urutan = Number(document.getElementById("stasiun-urutan").value);
+        if (!nama || !urutan) return;
+        await addDocTimestamped(stasiunKerjaCol, { nama, urutan_tahap: urutan });
+        document.getElementById("stasiun-nama").value = "";
+        document.getElementById("stasiun-urutan").value = "";
+      });
+
+      // --- Items ---
+      function renderItemStagesChecklist() {
+        const el = document.getElementById("item-stages-list");
+        if (stasiunList.length === 0) {
+          el.innerHTML = `<p class="hint">Tambahkan stasiun kerja dulu di tab "Stasiun Kerja".</p>`;
+          return;
+        }
+        el.innerHTML = stasiunList
+          .map(
+            (s) => `
+          <div class="stage-row">
+            <input type="checkbox" class="stage-check" value="${s.id}" checked />
+            <span style="flex:1">${escapeHtml(s.nama)}</span>
+            <input type="number" class="stage-duration" data-stasiun="${s.id}" min="0" step="0.5" value="1" /> hari
+          </div>`
+          )
+          .join("");
+      }
+
+      document.getElementById("save-item-btn").addEventListener("click", async () => {
+        const nama = document.getElementById("item-nama").value.trim();
+        const kategori = document.getElementById("item-kategori").value.trim();
+        if (!nama) return;
+        const tahap_kerja = Array.from(document.querySelectorAll(".stage-check:checked")).map((c) => c.value);
+        const estimasi_durasi_per_tahap = {};
+        document.querySelectorAll(".stage-check:checked").forEach((c) => {
+          const durInput = document.querySelector(`.stage-duration[data-stasiun="${c.value}"]`);
+          estimasi_durasi_per_tahap[c.value] = Number(durInput?.value ?? 1);
+        });
+        await addDocTimestamped(itemsCol, { nama, kategori, tahap_kerja, estimasi_durasi_per_tahap });
+        document.getElementById("item-nama").value = "";
+        document.getElementById("item-kategori").value = "";
+      });
+
+      watchCollection(itemsCol, (rows) => {
+        document.getElementById("items-tbody").innerHTML = rows.length
+          ? rows.map((it) => `
+            <tr>
+              <td>${escapeHtml(it.nama)}</td>
+              <td>${escapeHtml(it.kategori || "-")}</td>
+              <td>${(it.tahap_kerja || []).length}</td>
+              <td><button class="btn btn-ghost btn-sm" data-del-item="${it.id}">Hapus</button></td>
+            </tr>`).join("")
+          : `<tr><td colspan="4" class="empty-state">Belum ada item.</td></tr>`;
+        document.querySelectorAll("[data-del-item]").forEach((btn) =>
+          btn.addEventListener("click", () => removeDoc(itemsCol, btn.dataset.delItem))
+        );
+      });
+
+      // --- Materials ---
+      document.getElementById("save-material-btn").addEventListener("click", async () => {
+        const nama = document.getElementById("material-nama").value.trim();
+        if (!nama) return;
+        await addDocTimestamped(materialsCol, { nama });
+        document.getElementById("material-nama").value = "";
+      });
+      watchCollection(materialsCol, (rows) => {
+        document.getElementById("materials-tbody").innerHTML = rows.length
+          ? rows.map((m) => `<tr><td>${escapeHtml(m.nama)}</td><td><button class="btn btn-ghost btn-sm" data-del-material="${m.id}">Hapus</button></td></tr>`).join("")
+          : `<tr><td colspan="2" class="empty-state">Belum ada material.</td></tr>`;
+        document.querySelectorAll("[data-del-material]").forEach((btn) =>
+          btn.addEventListener("click", () => removeDoc(materialsCol, btn.dataset.delMaterial))
+        );
+      });
+
+      // --- Colors ---
+      document.getElementById("save-color-btn").addEventListener("click", async () => {
+        const nama = document.getElementById("color-nama").value.trim();
+        const kode_hex = document.getElementById("color-hex").value;
+        if (!nama) return;
+        await addDocTimestamped(colorsCol, { nama, kode_hex });
+        document.getElementById("color-nama").value = "";
+      });
+      watchCollection(colorsCol, (rows) => {
+        document.getElementById("colors-tbody").innerHTML = rows.length
+          ? rows.map((c) => `
+            <tr>
+              <td><span class="color-swatch" style="background:${c.kode_hex || "#ccc"}"></span>${escapeHtml(c.nama)}</td>
+              <td>${escapeHtml(c.kode_hex || "-")}</td>
+              <td><button class="btn btn-ghost btn-sm" data-del-color="${c.id}">Hapus</button></td>
+            </tr>`).join("")
+          : `<tr><td colspan="3" class="empty-state">Belum ada warna.</td></tr>`;
+        document.querySelectorAll("[data-del-color]").forEach((btn) =>
+          btn.addEventListener("click", () => removeDoc(colorsCol, btn.dataset.delColor))
+        );
+      });
+    </script>
+  </body>
+</html>

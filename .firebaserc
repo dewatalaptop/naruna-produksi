@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "default": "ai-app-builder-7bf8e"
+  },
+  "targets": {
+    "ai-app-builder-7bf8e": {
+      "hosting": {
+        "naruna-produksi": ["naruna-produksi"]
+      }
+    }
+  }
+}

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Purchase Order — Naruna Produksi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+      .line-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr 0.7fr auto; gap: 8px; align-items: end; margin-bottom: 10px; }
+      .line-row .field { margin-bottom: 0; }
+      .remove-line { background: var(--rust-soft); color: var(--rust); border: none; border-radius: 6px; padding: 8px 10px; height: 36px; }
+      .checkbox-row { display: flex; align-items: center; gap: 8px; margin: 14px 0; }
+      .checkbox-row input { width: 16px; height: 16px; }
+      .sim-panel { background: var(--amber-soft); border: 1px solid var(--amber); border-radius: 10px; padding: 14px 16px; margin: 14px 0; display: none; }
+      .sim-panel.visible { display: block; }
+      .qr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin-top: 16px; }
+      .qr-card { border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; background: #fff; }
+      .qr-card .qr-box { display: flex; justify-content: center; margin-bottom: 8px; }
+      .qr-card .meta { font-size: 11.5px; color: var(--text-secondary); }
+      @media print {
+        .app-shell > *:not(.main), .no-print { display: none !important; }
+        .qr-grid { display: grid; grid-template-columns: repeat(3, 1fr); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="main">
+        <h1>Purchase Order</h1>
+        <p class="page-desc">Input PO baru. Sistem otomatis memecah menjadi beberapa kelompok kerja (work group) berdasarkan kombinasi item × material × warna, lalu mencetak satu tiket QR per kelompok kerja.</p>
+
+        <div class="panel no-print">
+          <h3 style="margin-bottom: 14px; font-size: 14px;">PO Baru</h3>
+          <div class="field-row">
+            <div class="field"><label>No. PO</label><input id="po-no" placeholder="mis. PO-2026-001" /></div>
+            <div class="field"><label>Customer</label><input id="po-customer" placeholder="Nama customer" /></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>Tanggal masuk</label><input id="po-tanggal" type="date" /></div>
+            <div class="field"><label>Leadtime (minggu)</label><input id="po-leadtime" type="number" min="1" value="4" /></div>
+          </div>
+          <div class="checkbox-row">
+            <input type="checkbox" id="po-mendesak" />
+            <label for="po-mendesak">Tandai sebagai pesanan mendesak (sisipan)</label>
+          </div>
+
+          <div class="sim-panel" id="sim-panel">
+            <b>Simulasi dampak sisipan:</b>
+            <p style="margin: 8px 0 0; font-size: 13px;">PO ini akan disisipkan di posisi prioritas teratas begitu disimpan. Kelompok kerja aktif berikut ini yang paling mungkin proyeksi tenggatnya bergeser (diurutkan berdasar prioritas saat ini) — perhitungan pasti dilakukan otomatis oleh sistem setelah PO disimpan:</p>
+            <div id="sim-list" style="margin-top: 10px;"></div>
+          </div>
+
+          <h3 style="margin: 20px 0 10px; font-size: 13.5px;">Rincian pesanan (item × material × warna)</h3>
+          <div id="lines-container"></div>
+          <button class="btn btn-ghost btn-sm" id="add-line-btn" type="button">+ Tambah baris</button>
+
+          <div style="margin-top: 20px;">
+            <button class="btn" id="save-po-btn">Simpan PO &amp; Buat Tiket QR</button>
+            <span class="error-text" id="po-error" style="display:none; margin-left: 10px;"></span>
+          </div>
+        </div>
+
+        <div class="panel" id="qr-result-panel" style="display: none;">
+          <div style="display:flex; justify-content: space-between; align-items:center;" class="no-print">
+            <h3 style="font-size: 14px;">Tiket QR — siap dicetak</h3>
+            <button class="btn btn-ghost btn-sm" onclick="window.print()">Cetak</button>
+          </div>
+          <div class="qr-grid" id="qr-grid"></div>
+        </div>
+
+        <div class="panel no-print">
+          <h3 style="margin-bottom: 12px; font-size: 14px;">Daftar PO</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>No. PO</th><th>Customer</th><th>Masuk</th><th>Leadtime</th><th>Status</th></tr></thead>
+              <tbody id="po-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module">
+      import { requireAuth } from "/src/auth-guard.js";
+      import { renderNav } from "/src/nav.js";
+      import { itemsCol, materialsCol, colorsCol, purchaseOrdersCol, workGroupsCol, watchCollection, getAllOnce, addDocTimestamped, toLookupMap } from "/src/data.js";
+      import { Timestamp } from "/src/firebase.js";
+      import { escapeHtml, formatDate } from "/src/format.js";
+
+      await requireAuth();
+      renderNav("po.html");
+
+      let items = [], materials = [], colors = [], activeWorkGroups = [];
+      const [itemRows, materialRows, colorRows] = await Promise.all([getAllOnce(itemsCol), getAllOnce(materialsCol), getAllOnce(colorsCol)]);
+      items = itemRows; materials = materialRows; colors = colorRows;
+
+      watchCollection(workGroupsCol, (rows) => {
+        activeWorkGroups = rows.filter((w) => w.status === "aktif").sort((a, b) => (a.urutan_prioritas ?? 9999) - (b.urutan_prioritas ?? 9999));
+      });
+
+      function optionsHtml(rows) {
+        return rows.map((r) => `<option value="${r.id}">${escapeHtml(r.nama)}</option>`).join("");
+      }
+
+      function addLineRow() {
+        if (items.length === 0 || materials.length === 0 || colors.length === 0) {
+          document.getElementById("po-error").textContent = "Tambahkan item, material, dan warna dulu di Master Data sebelum membuat PO.";
+          document.getElementById("po-error").style.display = "inline";
+          return;
+        }
+        const container = document.getElementById("lines-container");
+        const row = document.createElement("div");
+        row.className = "line-row";
+        row.innerHTML = `
+          <div class="field"><label>Item</label><select class="line-item">${optionsHtml(items)}</select></div>
+          <div class="field"><label>Material</label><select class="line-material">${optionsHtml(materials)}</select></div>
+          <div class="field"><label>Warna</label><select class="line-color">${optionsHtml(colors)}</select></div>
+          <div class="field"><label>Jumlah</label><input class="line-jumlah" type="number" min="1" value="1" /></div>
+          <button type="button" class="remove-line">✕</button>
+        `;
+        row.querySelector(".remove-line").addEventListener("click", () => row.remove());
+        container.appendChild(row);
+      }
+      document.getElementById("add-line-btn").addEventListener("click", addLineRow);
+      addLineRow();
+
+      document.getElementById("po-mendesak").addEventListener("change", (e) => {
+        const panel = document.getElementById("sim-panel");
+        if (!e.target.checked) { panel.classList.remove("visible"); return; }
+        const itemMap = toLookupMap(items), materialMap = toLookupMap(materials), colorMap = toLookupMap(colors);
+        document.getElementById("sim-list").innerHTML = activeWorkGroups.length
+          ? activeWorkGroups.slice(0, 8).map((w) => `
+            <div style="font-size:13px; padding:4px 0;">
+              ${escapeHtml(itemMap[w.item_id]?.nama ?? "?")} — ${escapeHtml(materialMap[w.material_id]?.nama ?? "?")} / ${escapeHtml(colorMap[w.color_id]?.nama ?? "?")}
+              &middot; tenggat saat ini: ${formatDate(w.tenggat_proyeksi)}
+            </div>`).join("")
+          : `<p style="font-size:13px; margin:0;">Belum ada kelompok kerja aktif lain — sisipan ini tidak akan menggeser apa pun.</p>`;
+        panel.classList.add("visible");
+      });
+
+      document.getElementById("save-po-btn").addEventListener("click", async () => {
+        const errEl = document.getElementById("po-error");
+        errEl.style.display = "none";
+        const no_po = document.getElementById("po-no").value.trim();
+        const customer = document.getElementById("po-customer").value.trim();
+        const tanggalStr = document.getElementById("po-tanggal").value;
+        const leadtime_minggu = Number(document.getElementById("po-leadtime").value);
+        const mendesak = document.getElementById("po-mendesak").checked;
+        if (!no_po || !customer || !tanggalStr || !leadtime_minggu) {
+          errEl.textContent = "Lengkapi No. PO, customer, tanggal masuk, dan leadtime dulu.";
+          errEl.style.display = "inline";
+          return;
+        }
+        const lineRows = Array.from(document.querySelectorAll(".line-row"));
+        if (lineRows.length === 0) {
+          errEl.textContent = "Tambahkan minimal satu baris pesanan.";
+          errEl.style.display = "inline";
+          return;
+        }
+
+        const tanggal_masuk = Timestamp.fromDate(new Date(tanggalStr));
+        const tenggatDate = new Date(tanggalStr);
+        tenggatDate.setDate(tenggatDate.getDate() + leadtime_minggu * 7);
+        const tenggat_proyeksi = Timestamp.fromDate(tenggatDate);
+
+        const btn = document.getElementById("save-po-btn");
+        btn.disabled = true;
+        try {
+          const poRef = await addDocTimestamped(purchaseOrdersCol, {
+            no_po, customer, tanggal_masuk, leadtime_minggu, status: "aktif", mendesak,
+          });
+
+          const createdWorkGroups = [];
+          for (const row of lineRows) {
+            const item_id = row.querySelector(".line-item").value;
+            const material_id = row.querySelector(".line-material").value;
+            const color_id = row.querySelector(".line-color").value;
+            const jumlah = Number(row.querySelector(".line-jumlah").value) || 1;
+            const wgRef = await addDocTimestamped(workGroupsCol, {
+              po_id: poRef.id, item_id, material_id, color_id, jumlah,
+              tahap_sekarang: 0,
+              urutan_prioritas: mendesak ? 0 : 9999, // real ranking computed by hitungUlangPrioritas
+              tenggat_proyeksi,
+              status: "aktif",
+            });
+            createdWorkGroups.push({ id: wgRef.id, item_id, material_id, color_id, jumlah });
+          }
+
+          renderQrTickets(createdWorkGroups, no_po);
+          document.querySelectorAll(".line-row").forEach((r) => r.remove());
+          addLineRow();
+          document.getElementById("po-no").value = "";
+          document.getElementById("po-customer").value = "";
+          document.getElementById("po-mendesak").checked = false;
+          document.getElementById("sim-panel").classList.remove("visible");
+        } catch (err) {
+          errEl.textContent = err.message ?? "Gagal menyimpan PO.";
+          errEl.style.display = "inline";
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      function renderQrTickets(workGroups, no_po) {
+        const itemMap = toLookupMap(items), materialMap = toLookupMap(materials), colorMap = toLookupMap(colors);
+        const panel = document.getElementById("qr-result-panel");
+        const grid = document.getElementById("qr-grid");
+        grid.innerHTML = "";
+        panel.style.display = "block";
+        workGroups.forEach((w) => {
+          const card = document.createElement("div");
+          card.className = "qr-card";
+          card.innerHTML = `
+            <div class="qr-box" id="qr-${w.id}"></div>
+            <div class="meta"><b>${escapeHtml(itemMap[w.item_id]?.nama ?? "?")}</b></div>
+            <div class="meta">${escapeHtml(materialMap[w.material_id]?.nama ?? "?")} / ${escapeHtml(colorMap[w.color_id]?.nama ?? "?")}</div>
+            <div class="meta">Qty: ${w.jumlah} &middot; ${escapeHtml(no_po)}</div>
+          `;
+          grid.appendChild(card);
+          new QRCode(document.getElementById(`qr-${w.id}`), { text: w.id, width: 110, height: 110 });
+        });
+        panel.scrollIntoView({ behavior: "smooth" });
+      }
+
+      watchCollection(purchaseOrdersCol, (rows) => {
+        document.getElementById("po-tbody").innerHTML = rows.length
+          ? rows.slice().reverse().map((po) => `
+            <tr>
+              <td>${escapeHtml(po.no_po)}</td>
+              <td>${escapeHtml(po.customer)}</td>
+              <td>${formatDate(po.tanggal_masuk)}</td>
+              <td>${po.leadtime_minggu} minggu</td>
+              <td><span class="badge ${po.mendesak ? "badge-rust" : "badge-neutral"}">${po.mendesak ? "Mendesak" : po.status}</span></td>
+            </tr>`).join("")
+          : `<tr><td colspan="5" class="empty-state">Belum ada PO.</td></tr>`;
+      });
+    </script>
+  </body>
+</html>
