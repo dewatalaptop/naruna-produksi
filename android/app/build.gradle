@@ -64,6 +64,11 @@ dependencies {
     implementation "androidx.camera:camera-lifecycle:$camerax_version"
     implementation "androidx.camera:camera-view:$camerax_version"
     implementation "com.google.mlkit:barcode-scanning:17.3.0"
+    // ProcessCameraProvider.getInstance() returns a Guava ListenableFuture —
+    // camera-core doesn't pull in a full Guava impl transitively, only its
+    // API surface, so this needs to be explicit or compileDebugKotlin fails
+    // with "Cannot access class 'ListenableFuture'".
+    implementation "com.google.guava:guava:33.3.1-android"
 
     // Room — spec section 6's explicit offline-queue mechanism (scan_events
     // written locally first, synced once connectivity returns).
