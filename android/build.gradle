@@ -11,12 +11,12 @@ buildscript {
     }
 }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
+// Repositories for module dependency resolution are centralized in
+// settings.gradle's dependencyResolutionManagement (FAIL_ON_PROJECT_REPOS)
+// — an allprojects{repositories{...}} block here would conflict with that
+// (confirmed via a real CI failure: "Build was configured to prefer
+// settings repositories over project repositories but repository 'Google'
+// was added by build file 'build.gradle'").
 
 task clean(type: Delete) {
     delete rootProject.buildDir
