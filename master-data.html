@@ -31,6 +31,7 @@
           <button class="tab-btn" data-tab="materials">Material</button>
           <button class="tab-btn" data-tab="colors">Warna</button>
           <button class="tab-btn" data-tab="stasiun">Stasiun Kerja</button>
+          <button class="tab-btn" data-tab="akun">Akun Stasiun</button>
         </div>
 
         <div class="tab-panel active" id="tab-items">
@@ -94,13 +95,38 @@
             <div class="table-wrap"><table><thead><tr><th>Urutan</th><th>Nama</th><th></th></tr></thead><tbody id="stasiun-tbody"></tbody></table></div>
           </div>
         </div>
+
+        <div class="tab-panel" id="tab-akun">
+          <div class="panel">
+            <p class="hint" style="margin-bottom: 12px;">Satu akun sederhana per stasiun (bukan per operator individu) — dipakai untuk masuk ke aplikasi Android di tablet stasiun. Hanya pemilik akun utama (Anda) yang bisa membuat akun ini.</p>
+            <div class="field-row">
+              <div class="field"><label>Nama (label akun)</label><input id="akun-nama" placeholder="mis. Tablet Painting" /></div>
+              <div class="field"><label>Stasiun</label><select id="akun-stasiun"></select></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label>Username</label><input id="akun-username" placeholder="mis. painting" autocomplete="off" /></div>
+              <div class="field"><label>Password</label><input id="akun-password" type="password" placeholder="minimal 6 karakter" autocomplete="new-password" /></div>
+            </div>
+            <button class="btn" id="save-akun-btn">Buat Akun Stasiun</button>
+            <span class="error-text" id="akun-error" style="display:none; margin-left: 10px;"></span>
+          </div>
+          <div class="panel">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Nama</th><th>Username</th><th>Stasiun</th><th></th></tr></thead>
+                <tbody id="akun-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
 
     <script type="module">
       import { requireAuth } from "/src/auth-guard.js";
       import { renderNav } from "/src/nav.js";
-      import { itemsCol, materialsCol, colorsCol, stasiunKerjaCol, watchCollection, addDocTimestamped, removeDoc } from "/src/data.js";
+      import { itemsCol, materialsCol, colorsCol, stasiunKerjaCol, penggunaCol, watchCollection, addDocTimestamped, removeDoc, toLookupMap } from "/src/data.js";
+      import { functions, httpsCallable } from "/src/firebase.js";
       import { escapeHtml } from "/src/format.js";
 
       await requireAuth();
@@ -133,7 +159,12 @@
           btn.addEventListener("click", () => removeDoc(stasiunKerjaCol, btn.dataset.delStasiun))
         );
 
+        document.getElementById("akun-stasiun").innerHTML = stasiunList
+          .map((s) => `<option value="${s.id}">${escapeHtml(s.nama)}</option>`)
+          .join("");
+
         renderItemStagesChecklist();
+        renderAkunTable();
       });
 
       document.getElementById("save-stasiun-btn").addEventListener("click", async () => {
@@ -230,6 +261,79 @@
         document.querySelectorAll("[data-del-color]").forEach((btn) =>
           btn.addEventListener("click", () => removeDoc(colorsCol, btn.dataset.delColor))
         );
+      });
+
+      // --- Akun Stasiun ---
+      // Provisioned only via these Admin-SDK callables (requireOwner-gated
+      // server-side) — the client never writes to `pengguna` directly, see
+      // firestore.rules. A station's Firebase Auth email is an internal
+      // detail (`username@stasiun.naruna-produksi.local`); the operator only
+      // ever sees/types the plain username.
+      const createStationAccountFn = httpsCallable(functions, "createStationAccount");
+      const resetStationPasswordFn = httpsCallable(functions, "resetStationPassword");
+      const deleteStationAccountFn = httpsCallable(functions, "deleteStationAccount");
+
+      let akunRows = [];
+      watchCollection(penggunaCol, (rows) => {
+        akunRows = rows;
+        renderAkunTable();
+      });
+
+      function renderAkunTable() {
+        const stasiunMap = toLookupMap(stasiunList);
+        document.getElementById("akun-tbody").innerHTML = akunRows.length
+          ? akunRows.map((a) => `
+            <tr>
+              <td>${escapeHtml(a.nama)}</td>
+              <td>${escapeHtml(a.username)}</td>
+              <td>${escapeHtml(stasiunMap[a.stasiun_id]?.nama ?? "?")}</td>
+              <td style="white-space:nowrap;">
+                <input type="password" class="akun-new-password" data-uid="${a.uid}" placeholder="password baru" style="width:120px; display:inline-block;" autocomplete="new-password" />
+                <button class="btn btn-ghost btn-sm" data-reset-akun="${a.uid}">Reset</button>
+                <button class="btn btn-ghost btn-sm" data-del-akun="${a.uid}">Hapus</button>
+              </td>
+            </tr>`).join("")
+          : `<tr><td colspan="4" class="empty-state">Belum ada akun stasiun.</td></tr>`;
+
+        document.querySelectorAll("[data-reset-akun]").forEach((btn) =>
+          btn.addEventListener("click", async () => {
+            const uid = btn.dataset.resetAkun;
+            const input = document.querySelector(`.akun-new-password[data-uid="${uid}"]`);
+            const newPassword = input.value;
+            if (!newPassword || newPassword.length < 6) {
+              alert("Password baru minimal 6 karakter.");
+              return;
+            }
+            await resetStationPasswordFn({ uid, newPassword });
+            input.value = "";
+          })
+        );
+        document.querySelectorAll("[data-del-akun]").forEach((btn) =>
+          btn.addEventListener("click", () => deleteStationAccountFn({ uid: btn.dataset.delAkun }))
+        );
+      }
+
+      document.getElementById("save-akun-btn").addEventListener("click", async () => {
+        const errEl = document.getElementById("akun-error");
+        errEl.style.display = "none";
+        const nama = document.getElementById("akun-nama").value.trim();
+        const stasiun_id = document.getElementById("akun-stasiun").value;
+        const username = document.getElementById("akun-username").value.trim();
+        const password = document.getElementById("akun-password").value;
+        if (!nama || !stasiun_id || !username || !password) {
+          errEl.textContent = "Semua kolom wajib diisi.";
+          errEl.style.display = "inline";
+          return;
+        }
+        try {
+          await createStationAccountFn({ username, password, nama, stasiun_id });
+          document.getElementById("akun-nama").value = "";
+          document.getElementById("akun-username").value = "";
+          document.getElementById("akun-password").value = "";
+        } catch (err) {
+          errEl.textContent = err.message || "Gagal membuat akun.";
+          errEl.style.display = "inline";
+        }
       });
     </script>
   </body>

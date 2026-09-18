@@ -15,6 +15,7 @@ export const stasiunKerjaCol = collection(db, "stasiun_kerja");
 export const stokBiskuitCol = collection(db, "stok_biskuit");
 export const suratJalanCol = collection(db, "surat_jalan");
 export const notifikasiLogCol = collection(db, "notifikasi_log");
+export const penggunaCol = collection(db, "pengguna");
 
 export function watchCollection(col, cb, orderField) {
   const q = orderField ? query(col, orderBy(orderField)) : col;
