@@ -1,0 +1,86 @@
+name: Build Android APK
+
+# Manual trigger only — adapted from retail-pos's build-apk.yml, but this is
+# a genuinely native Kotlin project (no Capacitor/npm steps at all, unlike
+# that one) with its own stable debug keystore and its own SHA-1.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write # needed to publish the APK to a GitHub Release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+
+      # AGP 8.13 requires JDK 21 (same requirement retail-pos's workflow
+      # hit and documented, even though that project is Capacitor — it's an
+      # AGP requirement, not a Capacitor one).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # versionCode/versionName are literal placeholders in app/build.gradle
+      # (1 / "1.0") — stamping them from the run number makes every build a
+      # genuine, installer-visible update, same reasoning as retail-pos's
+      # workflow.
+      - name: Stamp app version from the build number
+        run: |
+          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" app/build.gradle
+          sed -i "s/versionName \"1.0\"/versionName \"1.0.${{ github.run_number }}\"/" app/build.gradle
+
+      # A debug keystore Gradle auto-generates on first use gets a NEW
+      # random SHA-1 on every ephemeral CI runner. Generate it once and
+      # commit it so it — and any future OAuth client registered against it
+      # — stays stable across builds. Own keystore for this app, not shared
+      # with retail-pos's.
+      - name: Ensure a stable debug keystore exists
+        run: |
+          mkdir -p ~/.android
+          if [ -f debug.keystore ]; then
+            cp debug.keystore ~/.android/debug.keystore
+          else
+            keytool -genkeypair -v -keystore debug.keystore \
+              -storepass android -alias androiddebugkey -keypass android \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+            cp debug.keystore ~/.android/debug.keystore
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add debug.keystore
+            git commit -m "Add stable debug keystore for reproducible Android builds"
+            git push
+          fi
+          echo "SHA-1 fingerprint:"
+          keytool -list -v -keystore debug.keystore -storepass android -alias androiddebugkey | grep "SHA1:"
+
+      - name: Build debug APK
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      # Confirms the APK's actual signing cert, not just the keystore
+      # file's — see retail-pos's workflow for why this step earns its
+      # keep (a real mismatch was invisible until apksigner caught it).
+      - name: Verify the actual signing certificate baked into this APK
+        run: |
+          APKSIGNER=$(find "$ANDROID_HOME" -name apksigner -type f | sort -V | tail -1)
+          echo "Using apksigner: $APKSIGNER"
+          "$APKSIGNER" verify --print-certs app/build/outputs/apk/debug/app-debug.apk
+
+      # Debug-signed, sideload-only — this is an internal tool for a small
+      # studio's own floor tablets, not a Play Store release.
+      - name: Publish APK to a GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Android build (run ${{ github.run_number }})
+          body: Debug-signed APK, auto-published by the Build Android APK workflow. Not for Play Store distribution.
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+          make_latest: true

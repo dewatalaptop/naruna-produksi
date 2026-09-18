@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.NarunaProduksi" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/clay</item>
+        <item name="colorPrimaryDark">@color/clay_dark</item>
+        <item name="colorAccent">@color/clay</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="android:statusBarColor">@color/clay_dark</item>
+    </style>
+</resources>

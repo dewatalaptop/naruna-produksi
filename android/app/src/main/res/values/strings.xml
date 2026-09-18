@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Naruna Produksi</string>
+    <string name="notification_channel_id">naruna_alerts</string>
+    <string name="notification_channel_name">Peringatan Tenggat</string>
+
+    <string name="login_title">Naruna Produksi</string>
+    <string name="login_subtitle">Masuk dengan akun stasiun Anda</string>
+    <string name="login_username_hint">Username</string>
+    <string name="login_password_hint">Password</string>
+    <string name="login_button">Masuk</string>
+    <string name="login_error_empty">Username dan password wajib diisi.</string>
+    <string name="login_error_failed">Username atau password salah.</string>
+    <string name="login_error_network">Gagal masuk, periksa koneksi internet.</string>
+
+    <string name="queue_empty">Tidak ada tiket menunggu di stasiun ini.</string>
+    <string name="queue_scan_fab">Pindai QR</string>
+    <string name="menu_switch_account">Ganti Akun</string>
+    <string name="unsynced_format">%d belum tersinkron</string>
+    <string name="online">Online</string>
+    <string name="offline">Offline</string>
+
+    <string name="scan_manual_hint">Atau masukkan ID tiket manual</string>
+    <string name="scan_manual_button">Cari</string>
+    <string name="scan_not_found">Tiket tidak ditemukan.</string>
+    <string name="scan_wrong_station">Tiket ini seharusnya berada di stasiun lain saat ini. Lanjutkan tetap?</string>
+    <string name="scan_already_done">Tiket ini sudah melewati stasiun ini.</string>
+    <string name="scan_confirm_masuk">Konfirmasi tiket MASUK ke stasiun ini?</string>
+    <string name="scan_confirm_keluar">Konfirmasi tiket KELUAR dari stasiun ini</string>
+    <string name="scan_jumlah_hint">Jumlah</string>
+    <string name="scan_susut_hint">Susut</string>
+    <string name="scan_confirm_button">Konfirmasi</string>
+    <string name="scan_saved">Tersimpan, akan disinkronkan otomatis.</string>
+    <string name="scan_jumlah_required">Jumlah wajib diisi.</string>
+</resources>

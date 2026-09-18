@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches the web app's clay/terracotta palette (src/style.css --clay). -->
+    <color name="clay">#B5651D</color>
+    <color name="clay_dark">#8F4F16</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="background">#FBF7F2</color>
+    <color name="text_primary">#2B221B</color>
+    <color name="text_secondary">#7A6A5C</color>
+    <color name="border">#E4D9CC</color>
+    <color name="online_green">#3A8B4C</color>
+    <color name="offline_red">#C2453C</color>
+    <color name="white">#FFFFFF</color>
+</resources>
