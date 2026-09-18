@@ -2,7 +2,7 @@
   "hosting": {
     "target": "naruna-produksi",
     "public": ".",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "README.md"],
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**", "README.md", "android/**", ".github/**"],
     "rewrites": [{ "source": "**", "destination": "/index.html" }],
     "headers": [
       {

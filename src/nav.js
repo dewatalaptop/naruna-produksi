@@ -8,6 +8,7 @@ const PAGES = [
   { href: "/surat-jalan.html", label: "Surat Jalan" },
   { href: "/laporan.html", label: "Laporan Kapasitas" },
   { href: "/pesanan-tertahan.html", label: "Pesanan Tertahan" },
+  { href: "/unduh-aplikasi.html", label: "Aplikasi Android" },
 ];
 
 export function renderNav(activeHref) {

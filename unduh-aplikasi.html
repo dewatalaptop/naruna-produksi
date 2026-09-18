@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Naruna Produksi — Unduh Aplikasi Stasiun</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <style>
+      body { background: var(--bg); }
+      .guide-shell { max-width: 680px; margin: 0 auto; padding: 28px 20px 60px; }
+      .guide-header { text-align: center; margin-bottom: 22px; }
+      .guide-header .brand { font-size: 20px; font-weight: 800; color: var(--clay); }
+      .guide-header p { color: var(--text-secondary); font-size: 13.5px; margin: 6px 0 0; }
+
+      .download-card {
+        background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+        padding: 28px 24px; text-align: center; margin-bottom: 24px;
+      }
+      .download-btn {
+        display: inline-flex; align-items: center; gap: 10px; justify-content: center;
+        width: 100%; max-width: 360px; background: var(--clay); color: #fff;
+        border-radius: 12px; padding: 16px 20px; font-weight: 700; font-size: 16px;
+        text-decoration: none;
+      }
+      .download-btn:hover { background: var(--clay-hover); }
+      .download-meta { color: var(--text-faint); font-size: 12px; margin-top: 10px; }
+
+      .guide-section { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px 22px; margin-bottom: 16px; }
+      .guide-section h2 { font-size: 15px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+      .guide-section .step-num {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 22px; height: 22px; border-radius: 999px; background: var(--clay-soft); color: var(--clay-hover);
+        font-size: 12px; font-weight: 800; flex: none;
+      }
+      .guide-section p, .guide-section li { font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; }
+      .guide-section ol, .guide-section ul { margin: 10px 0 0; padding-left: 20px; }
+      .guide-section li + li { margin-top: 8px; }
+      .guide-section li strong { color: var(--text); }
+
+      .indicator-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+      .indicator-dot { width: 10px; height: 10px; border-radius: 999px; flex: none; }
+      .indicator-dot.online { background: var(--leaf); }
+      .indicator-dot.offline { background: var(--rust); }
+
+      .faq-item + .faq-item { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+      .faq-item .q { font-weight: 700; font-size: 13.5px; color: var(--text); margin-bottom: 4px; }
+
+      .back-link { display: block; text-align: center; margin-top: 8px; font-size: 13px; color: var(--text-faint); text-decoration: none; }
+    </style>
+  </head>
+  <body>
+    <div class="guide-shell">
+      <div class="guide-header">
+        <div class="brand">Naruna Produksi</div>
+        <p>Aplikasi Android untuk operator stasiun — pindai tiket kerja, catat masuk/keluar, tanpa perlu kertas.</p>
+      </div>
+
+      <div class="download-card">
+        <a class="download-btn" href="https://github.com/dewatalaptop/naruna-produksi/releases/download/android-latest/app-debug.apk">
+          ⬇ Unduh Aplikasi (APK)
+        </a>
+        <p class="download-meta">Untuk tablet/HP Android versi 7.0 ke atas. Ukuran file sekitar 33 MB.</p>
+      </div>
+
+      <div class="guide-section">
+        <h2>Sebelum mulai</h2>
+        <ul>
+          <li>Akun stasiun (username &amp; password) harus <strong>sudah dibuat oleh admin</strong> lebih dulu, lewat menu <strong>Master Data → Akun Stasiun</strong> di aplikasi web ini. Aplikasi Android tidak bisa dipakai untuk mendaftar sendiri.</li>
+          <li>Tablet/HP terhubung internet saat instal dan login pertama kali. Setelah itu, aplikasi tetap bisa dipakai sementara tidak ada internet — lihat bagian "Indikator penting" di bawah.</li>
+        </ul>
+      </div>
+
+      <div class="guide-section">
+        <h2><span class="step-num">1</span> Cara Instal</h2>
+        <ol>
+          <li>Buka halaman ini di tablet stasiun, lalu tekan tombol <strong>Unduh Aplikasi (APK)</strong> di atas.</li>
+          <li>Setelah selesai terunduh, buka file <strong>app-debug.apk</strong> dari notifikasi unduhan, atau dari folder <strong>Unduhan/Downloads</strong>.</li>
+          <li>Kalau muncul peringatan <strong>"Untuk keamananmu, HP tidak diizinkan menginstal aplikasi tidak dikenal dari sumber ini"</strong> — ini normal, karena aplikasi belum ada di Play Store. Tekan <strong>Setelan</strong>, aktifkan <strong>Izinkan dari sumber ini</strong>, lalu tekan tombol kembali dan tekan <strong>Instal</strong> lagi.</li>
+          <li>Tunggu sampai proses instal selesai, lalu tekan <strong>Buka</strong>.</li>
+        </ol>
+      </div>
+
+      <div class="guide-section">
+        <h2><span class="step-num">2</span> Login Pertama Kali</h2>
+        <ol>
+          <li>Masukkan <strong>Username</strong> yang diberikan admin (biasanya nama stasiun, contoh: <em>painting</em>).</li>
+          <li>Masukkan <strong>Password</strong> yang diberikan admin.</li>
+          <li>Tekan <strong>Masuk</strong>.</li>
+        </ol>
+        <p>Setelah berhasil, aplikasi akan <strong>tetap login</strong> di tablet ini — tidak perlu login ulang setiap hari, kecuali memang ingin ganti akun (lihat bagian bawah).</p>
+      </div>
+
+      <div class="guide-section">
+        <h2><span class="step-num">3</span> Pakai Sehari-hari</h2>
+        <ul>
+          <li><strong>Melihat antrean</strong> — daftar tiket kerja yang menunggu di stasiun ini muncul otomatis di layar utama, sudah diurutkan dari yang paling mendesak duluan.</li>
+          <li><strong>Memindai QR</strong> — tekan tombol bulat <strong>Pindai QR</strong> di pojok kanan bawah, lalu arahkan kamera ke QR code yang tertempel di tiket kerja.</li>
+          <li><strong>Kalau QR rusak/tidak terbaca</strong> — ketik ID tiket secara manual di kolom bagian bawah layar kamera, lalu tekan <strong>Cari</strong>.</li>
+          <li><strong>Tiket baru tiba (scan MASUK)</strong> — layar akan menampilkan kartu konfirmasi "Konfirmasi tiket MASUK". Tekan <strong>Konfirmasi</strong>.</li>
+          <li><strong>Pekerjaan selesai (scan KELUAR)</strong> — isi kolom <strong>Jumlah</strong> (dan <strong>Susut</strong> jika ada barang cacat/pecah), lalu tekan <strong>Konfirmasi</strong>.</li>
+          <li>Kalau muncul tulisan merah <strong>"Tiket ini seharusnya berada di stasiun lain"</strong> — pastikan dulu memang benar tiket itu yang mau diproses sebelum lanjut menekan Konfirmasi.</li>
+          <li>Bisa juga tekan langsung salah satu tiket di daftar antrean tanpa perlu memindai kamera.</li>
+        </ul>
+      </div>
+
+      <div class="guide-section">
+        <h2>Indikator Penting di Layar</h2>
+        <div class="indicator-row"><span class="indicator-dot online"></span><span><strong>Online</strong> (titik hijau) — tersambung internet, data langsung tersimpan ke server.</span></div>
+        <div class="indicator-row"><span class="indicator-dot offline"></span><span><strong>Offline</strong> (titik merah) — tidak ada internet. Jangan khawatir, data tetap aman tersimpan di tablet dan akan otomatis terkirim begitu internet tersambung lagi.</span></div>
+        <p style="margin-top:10px;">Tulisan kecil seperti <strong>"3 belum tersinkron"</strong> menunjukkan jumlah catatan scan yang masih menunggu terkirim ke server — ini akan hilang sendiri begitu terkirim.</p>
+      </div>
+
+      <div class="guide-section">
+        <h2>Ganti Akun / Tablet Dipindah ke Stasiun Lain</h2>
+        <p>Tekan menu titik tiga di pojok kanan atas, pilih <strong>Ganti Akun</strong>, lalu login dengan akun stasiun yang baru.</p>
+      </div>
+
+      <div class="guide-section">
+        <h2>Kalau Ada Masalah</h2>
+        <div class="faq-item">
+          <div class="q">Kamera tidak menyala saat memindai</div>
+          <p>Pastikan sudah menekan "Izinkan" saat aplikasi pertama kali meminta akses Kamera. Kalau tertolak, buka <strong>Setelan HP → Aplikasi → Naruna Produksi → Izin</strong>, lalu aktifkan Kamera.</p>
+        </div>
+        <div class="faq-item">
+          <div class="q">Notifikasi peringatan tenggat tidak muncul</div>
+          <p>Buka <strong>Setelan HP → Aplikasi → Naruna Produksi → Izin</strong>, lalu aktifkan Notifikasi.</p>
+        </div>
+        <div class="faq-item">
+          <div class="q">Lupa username/password</div>
+          <p>Minta admin untuk reset password lewat menu <strong>Master Data → Akun Stasiun</strong> di aplikasi web ini.</p>
+        </div>
+        <div class="faq-item">
+          <div class="q">Antrean tiket kosong padahal seharusnya ada</div>
+          <p>Kemungkinan Purchase Order atau data Item terkait belum dibuat admin di aplikasi web, atau tiket itu memang belum sampai giliran stasiun ini.</p>
+        </div>
+      </div>
+
+      <a class="back-link" href="/index.html">← Kembali ke halaman masuk</a>
+    </div>
+  </body>
+</html>
