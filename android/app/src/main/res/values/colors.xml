@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Matches the web app's clay/terracotta palette (src/style.css --clay). -->
+    <!-- Matches the web app's clay/terracotta palette (src/style.css, the clay custom property). -->
     <color name="clay">#B5651D</color>
     <color name="clay_dark">#8F4F16</color>
     <color name="surface">#FFFFFF</color>
