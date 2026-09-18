@@ -23,6 +23,13 @@
       }
       .google-btn:hover { background: var(--surface-sunk); }
       .login-error { color: var(--rust); font-size: 13px; margin-top: 14px; display: none; }
+      .guide-btn {
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        width: 100%; padding: 11px; border-radius: 10px; margin-top: 10px;
+        background: var(--clay-soft); color: var(--clay-hover); font-weight: 700; font-size: 14px;
+        text-decoration: none;
+      }
+      .guide-btn:hover { background: var(--clay); color: #fff; }
     </style>
   </head>
   <body>
@@ -34,7 +41,8 @@
         Masuk dengan Google
       </button>
       <p class="login-error" id="login-error">Gagal masuk. Coba lagi.</p>
-      <a href="/unduh-aplikasi.html" style="display:block; margin-top:20px; font-size:13px; color:var(--text-faint);">
+      <a href="/panduan.html" class="guide-btn">📖 Lihat Panduan Lengkap Penggunaan</a>
+      <a href="/unduh-aplikasi.html" style="display:block; margin-top:14px; font-size:13px; color:var(--text-faint);">
         Operator stasiun? Unduh aplikasi Android →
       </a>
     </div>

@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panduan Penggunaan — Naruna Produksi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/style.css" />
+    <style>
+      .role-legend { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+      .toc-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+      .toc-pills a {
+        font-size: 12.5px; font-weight: 600; color: var(--text-secondary); text-decoration: none;
+        background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 6px 12px;
+      }
+      .toc-pills a:hover { border-color: var(--clay); color: var(--clay); }
+
+      .flow-strip {
+        display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12.5px; font-weight: 600;
+        color: var(--text-secondary); margin-top: 4px;
+      }
+      .flow-strip .node { background: var(--surface-sunk); border-radius: 8px; padding: 7px 11px; }
+      .flow-strip .arrow { color: var(--text-faint); }
+
+      .phase-title { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+      .phase-title .num {
+        display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px;
+        border-radius: 999px; background: var(--clay-soft); color: var(--clay-hover); font-weight: 800; font-size: 13px; flex: none;
+      }
+      .phase-title h2 { font-size: 16px; }
+      .phase-desc { color: var(--text-secondary); font-size: 13px; margin: 0 0 14px 36px; }
+
+      .step-row { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+      .step-row:last-child { border-bottom: none; }
+      .step-idx {
+        flex: none; width: 22px; height: 22px; border-radius: 999px; background: var(--surface-sunk);
+        color: var(--text-secondary); font-size: 11.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      }
+      .step-title { font-weight: 600; font-size: 13.5px; margin-bottom: 2px; }
+      .step-desc { color: var(--text-secondary); font-size: 13px; }
+      .step-badge { flex: none; }
+
+      .ref-item { background: var(--clay-soft); color: var(--clay-hover); border-radius: 5px; padding: 1px 6px; font-weight: 600; font-size: 0.95em; }
+
+      .quicklinks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+      .quicklinks a { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; text-decoration: none; }
+      .quicklinks a:hover { border-color: var(--clay); }
+      .quicklinks .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-faint); font-weight: 700; }
+      .quicklinks .t { font-weight: 700; font-size: 13.5px; color: var(--clay); margin-top: 3px; }
+
+      @media (max-width: 640px) {
+        .quicklinks { grid-template-columns: 1fr; }
+        .phase-desc { margin-left: 0; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell">
+      <main class="main">
+        <h1>Panduan Penggunaan</h1>
+        <p class="page-desc">Alur kerja lengkap Naruna Produksi, dari pesanan masuk sampai barang dikirim — mengikuti urutan yang sebenarnya dipakai sehari-hari, bukan sekadar daftar fitur.</p>
+
+        <div class="role-legend">
+          <span class="badge badge-amber">● Admin / Kepala Gudang — aplikasi web</span>
+          <span class="badge badge-sky">● Operator Stasiun — aplikasi Android</span>
+          <span class="badge badge-neutral">● Otomatis oleh sistem</span>
+        </div>
+
+        <div class="toc-pills">
+          <a href="#alur-besar">Alur Besar</a>
+          <a href="#fase-1">1. Persiapan</a>
+          <a href="#fase-2">2. Pesanan Masuk</a>
+          <a href="#fase-3">3. Lantai Produksi</a>
+          <a href="#fase-4">4. Pemantauan</a>
+          <a href="#fase-5">5. Kirim &amp; Laporan</a>
+          <a href="#khusus">Kasus Khusus</a>
+          <a href="#referensi">Referensi Cepat</a>
+        </div>
+
+        <div class="panel" id="alur-besar">
+          <h3 style="margin-bottom: 10px; font-size: 14px;">Alur Besar Satu Pesanan</h3>
+          <div class="flow-strip">
+            <span class="node">Admin: Setup Master Data &amp; Akun Stasiun</span>
+            <span class="arrow">→</span>
+            <span class="node">Admin: Input Purchase Order</span>
+            <span class="arrow">→</span>
+            <span class="node">Sistem: Pecah jadi Kelompok Kerja + Cetak QR</span>
+            <span class="arrow">→</span>
+            <span class="node">Operator: Scan Masuk → Kerjakan → Scan Keluar (ulang per stasiun)</span>
+            <span class="arrow">→</span>
+            <span class="node">Sistem: Tandai Selesai</span>
+            <span class="arrow">→</span>
+            <span class="node">Admin: Catat Surat Jalan</span>
+          </div>
+          <p class="hint" style="margin-top:10px;">Kepala Gudang bisa memantau semua ini lewat Dashboard, kapan saja, tanpa harus berkeliling ke tiap stasiun.</p>
+        </div>
+
+        <div class="panel" id="fase-1">
+          <div class="phase-title"><span class="num">1</span><h2>Persiapan Awal</h2></div>
+          <p class="phase-desc">Dilakukan sekali di awal, sebelum pesanan pertama masuk. Semua modul lain bergantung pada data ini.</p>
+          <div>
+            <div class="step-row">
+              <span class="step-idx">1</span>
+              <div style="flex:1;">
+                <div class="step-title">Masuk dengan akun Google</div>
+                <div class="step-desc">Siapa pun dengan akun Google yang diberi akses bisa masuk sebagai admin/kepala gudang.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">2</span>
+              <div style="flex:1;">
+                <div class="step-title">Susun Stasiun Kerja sesuai alur nyata di gudang</div>
+                <div class="step-desc">Menu <span class="ref-item">Master Data → Stasiun Kerja</span> — masukkan tiap tahap produksi beserta urutannya (mis. Pembentukan → Pengeringan → Bakar Biskuit → Painting → QC). Urutan ini menentukan tiket berpindah ke stasiun mana berikutnya.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">3</span>
+              <div style="flex:1;">
+                <div class="step-title">Isi Item, Material, dan Warna</div>
+                <div class="step-desc">Untuk setiap Item, centang tahap kerja mana saja yang dilalui — tidak semua barang melewati semua stasiun.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">4</span>
+              <div style="flex:1;">
+                <div class="step-title">Buat Akun Stasiun untuk tiap tablet</div>
+                <div class="step-desc">Tab <span class="ref-item">Akun Stasiun</span> — satu akun (username &amp; password) per stasiun, bukan per orang. Dipakai login di aplikasi Android tablet stasiun tersebut.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">5</span>
+              <div style="flex:1;">
+                <div class="step-title">Instal aplikasi Android di tiap tablet stasiun</div>
+                <div class="step-desc">Lihat <a href="/unduh-aplikasi.html">halaman unduh aplikasi Android</a> — instal, lalu login sekali. Tablet tetap login seterusnya.</div>
+              </div>
+              <span class="step-badge badge badge-sky">Operator</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="fase-2">
+          <div class="phase-title"><span class="num">2</span><h2>Pesanan Masuk</h2></div>
+          <p class="phase-desc">Dari pesanan customer sampai tiket QR siap ditempel di rak produksi.</p>
+          <div>
+            <div class="step-row">
+              <span class="step-idx">1</span>
+              <div style="flex:1;">
+                <div class="step-title">Input Purchase Order baru</div>
+                <div class="step-desc">Isi nama customer, tanggal masuk, dan leadtime (minggu). Tenggat proyeksi dihitung otomatis dari dua angka ini.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">2</span>
+              <div style="flex:1;">
+                <div class="step-title">Tambah baris per kombinasi Item × Material × Warna</div>
+                <div class="step-desc">Satu PO bisa punya banyak baris berbeda kombinasi dalam pesanan yang sama.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">3</span>
+              <div style="flex:1;">
+                <div class="step-title">(Opsional) tandai sebagai pesanan mendesak</div>
+                <div class="step-desc">Lihat dulu pratinjau bagaimana pesanan ini akan menggeser antrean pesanan lain, sebelum benar-benar disimpan.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">4</span>
+              <div style="flex:1;">
+                <div class="step-title">Simpan — sistem otomatis memecah jadi Kelompok Kerja</div>
+                <div class="step-desc">Tiap kombinasi item/material/warna jadi satu kelompok kerja tersendiri, masing-masing dengan QR code sendiri yang tidak berubah sampai selesai.</div>
+              </div>
+              <span class="step-badge badge badge-neutral">Sistem</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">5</span>
+              <div style="flex:1;">
+                <div class="step-title">Cetak tiket QR dan tempel di barang/rak</div>
+                <div class="step-desc">Inilah yang akan dipindai operator di tiap stasiun.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="fase-3">
+          <div class="phase-title"><span class="num">3</span><h2>Lantai Produksi (aplikasi Android)</h2></div>
+          <p class="phase-desc">Diulang di setiap stasiun, untuk setiap tiket, sampai tahap terakhir barang itu selesai.</p>
+          <div>
+            <div class="step-row">
+              <span class="step-idx">1</span>
+              <div style="flex:1;">
+                <div class="step-title">Lihat antrean tiket yang menunggu</div>
+                <div class="step-desc">Layar utama menampilkan tiket yang sudah waktunya diproses di stasiun ini, diurutkan dari paling mendesak.</div>
+              </div>
+              <span class="step-badge badge badge-sky">Operator</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">2</span>
+              <div style="flex:1;">
+                <div class="step-title">Barang tiba → Pindai QR → Scan Masuk</div>
+                <div class="step-desc">QR rusak? Ketik ID tiket manual. Tekan Konfirmasi untuk mencatat waktu tiba.</div>
+              </div>
+              <span class="step-badge badge badge-sky">Operator</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">3</span>
+              <div style="flex:1;">
+                <div class="step-title">Pekerjaan selesai → pindai lagi → Scan Keluar</div>
+                <div class="step-desc">Isi Jumlah dan Susut (kalau ada yang cacat/pecah), lalu Konfirmasi. Tiket otomatis pindah ke antrean stasiun berikutnya.</div>
+              </div>
+              <span class="step-badge badge badge-sky">Operator</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">4</span>
+              <div style="flex:1;">
+                <div class="step-title">Tanpa internet, data tetap aman</div>
+                <div class="step-desc">Scan tersimpan di tablet dan otomatis terkirim begitu internet tersambung lagi.</div>
+              </div>
+              <span class="step-badge badge badge-neutral">Sistem</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="fase-4">
+          <div class="phase-title"><span class="num">4</span><h2>Pemantauan dari Kantor</h2></div>
+          <p class="phase-desc">Kepala gudang memantau semua stasiun dari satu layar.</p>
+          <div>
+            <div class="step-row">
+              <span class="step-idx">1</span>
+              <div style="flex:1;">
+                <div class="step-title">Buka Dashboard</div>
+                <div class="step-desc">Semua kelompok kerja aktif, diurutkan paling mendesak, lengkap progres tahap dan tanda risiko keterlambatan.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">2</span>
+              <div style="flex:1;">
+                <div class="step-title">Prioritas dihitung ulang otomatis</div>
+                <div class="step-desc">Tiap beberapa jam, dan tiap ada scan/PO baru — berdasar sisa tahap dan sisa waktu, bukan sekadar tanggal masuk.</div>
+              </div>
+              <span class="step-badge badge badge-neutral">Sistem</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">3</span>
+              <div style="flex:1;">
+                <div class="step-title">Notifikasi otomatis ke tablet terkait</div>
+                <div class="step-desc">Kalau proyeksi sebuah tiket lewat tenggat, tablet stasiun yang menunggu tiket itu mendapat notifikasi push.</div>
+              </div>
+              <span class="step-badge badge badge-neutral">Sistem</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="fase-5">
+          <div class="phase-title"><span class="num">5</span><h2>Kirim &amp; Laporan</h2></div>
+          <p class="phase-desc">Setelah barang lolos QC, sampai laporan bulanan untuk evaluasi.</p>
+          <div>
+            <div class="step-row">
+              <span class="step-idx">1</span>
+              <div style="flex:1;">
+                <div class="step-title">Catat Stok Biskuit (opsional)</div>
+                <div class="step-desc">Barang yang sudah siap masuk tahap painting, per kombinasi item/material/warna.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">2</span>
+              <div style="flex:1;">
+                <div class="step-title">Buat Surat Jalan saat barang dikirim</div>
+                <div class="step-desc">Bisa dikirim bertahap — sistem menjumlahkan progres pengiriman per PO otomatis.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">3</span>
+              <div style="flex:1;">
+                <div class="step-title">Lihat Laporan Kapasitas tiap bulan</div>
+                <div class="step-desc">Rekap scan per stasiun dan per jenis barang — untuk melihat stasiun mana yang jadi bottleneck.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="khusus">
+          <div class="phase-title"><span class="num">✦</span><h2>Kasus Khusus</h2></div>
+          <div>
+            <div class="step-row">
+              <span class="step-idx">↻</span>
+              <div style="flex:1;">
+                <div class="step-title">Customer belum konfirmasi desain/spesifikasi</div>
+                <div class="step-desc">Menu <span class="ref-item">Pesanan Tertahan</span> — tekan Tahan. Selama ditahan, tiket ini keluar dari perhitungan prioritas dan lama penahanannya dicatat untuk pengingat follow-up.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">↻</span>
+              <div style="flex:1;">
+                <div class="step-title">Tablet dipindah ke stasiun lain / ganti shift</div>
+                <div class="step-desc">Di aplikasi Android, menu titik tiga → Ganti Akun → login dengan akun stasiun yang sesuai.</div>
+              </div>
+              <span class="step-badge badge badge-sky">Operator</span>
+            </div>
+            <div class="step-row">
+              <span class="step-idx">↻</span>
+              <div style="flex:1;">
+                <div class="step-title">Operator lupa password</div>
+                <div class="step-desc">Admin reset lewat <span class="ref-item">Master Data → Akun Stasiun</span>, tanpa perlu membuat akun baru.</div>
+              </div>
+              <span class="step-badge badge badge-amber">Admin</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" id="referensi">
+          <h3 style="margin-bottom: 12px; font-size: 14px;">Referensi Cepat: Siapa Melakukan Apa</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Kegiatan</th><th>Dilakukan oleh</th><th>Di mana</th></tr></thead>
+              <tbody>
+                <tr><td>Atur stasiun kerja &amp; jenis barang</td><td>Admin</td><td>Master Data</td></tr>
+                <tr><td>Buat/hapus/reset akun stasiun</td><td>Admin</td><td>Master Data → Akun Stasiun</td></tr>
+                <tr><td>Input pesanan baru &amp; cetak QR</td><td>Admin</td><td>Purchase Order</td></tr>
+                <tr><td>Scan masuk/keluar barang</td><td>Operator Stasiun</td><td>Aplikasi Android</td></tr>
+                <tr><td>Pantau progres semua pesanan</td><td>Admin / Kepala Gudang</td><td>Dashboard</td></tr>
+                <tr><td>Catat pengiriman</td><td>Admin</td><td>Surat Jalan</td></tr>
+                <tr><td>Lihat laporan bulanan</td><td>Admin / Kepala Gudang</td><td>Laporan Kapasitas</td></tr>
+                <tr><td>Tahan pesanan yang belum dikonfirmasi</td><td>Admin</td><td>Pesanan Tertahan</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="quicklinks">
+            <a href="/index.html">
+              <div class="k">Dashboard Web</div>
+              <div class="t">Masuk dengan Google →</div>
+            </a>
+            <a href="/unduh-aplikasi.html">
+              <div class="k">Aplikasi Android</div>
+              <div class="t">Unduh &amp; panduan instal →</div>
+            </a>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module">
+      import { renderNav } from "/src/nav.js";
+      renderNav("panduan.html");
+    </script>
+  </body>
+</html>
