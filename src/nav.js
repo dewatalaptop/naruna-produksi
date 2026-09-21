@@ -37,11 +37,14 @@ export function renderNav(activeHref) {
       <nav class="sidebar" id="sidebar">
         <div class="brand">Naruna Produksi<span>Manajemen Produksi</span></div>
         ${linksHtml}
+        <button class="signout" id="report-bug-btn" style="margin-bottom:6px">Laporkan Masalah</button>
         <button class="signout" id="signout-btn">Keluar</button>
       </nav>
     `
     );
   }
+
+  document.getElementById("report-bug-btn")?.addEventListener("click", () => window.BugReporter?.openDialog());
 
   document.getElementById("signout-btn")?.addEventListener("click", async () => {
     await signOut(auth);
