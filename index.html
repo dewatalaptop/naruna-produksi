@@ -56,7 +56,17 @@
         if (user) window.location.href = "/dashboard.html";
       });
 
-      document.getElementById("google-signin").addEventListener("click", async () => {
+      // Guard against a double-click firing a second signInWithPopup() while the
+      // first is still in flight — Firebase Auth's popup-operation code isn't
+      // re-entrant and throws "INTERNAL ASSERTION FAILED: Pending promise was
+      // never set" as an unhandled rejection when that happens (real bug seen
+      // in production, 2026-09-24: two clicks 2s apart on a slow popup open).
+      let signInInFlight = false;
+      const signInBtn = document.getElementById("google-signin");
+      signInBtn.addEventListener("click", async () => {
+        if (signInInFlight) return;
+        signInInFlight = true;
+        signInBtn.disabled = true;
         const errEl = document.getElementById("login-error");
         errEl.style.display = "none";
         try {
@@ -66,6 +76,9 @@
           console.error(err);
           errEl.textContent = err.message ?? "Gagal masuk. Coba lagi.";
           errEl.style.display = "block";
+        } finally {
+          signInInFlight = false;
+          signInBtn.disabled = false;
         }
       });
     </script>
